@@ -10,4 +10,4 @@ The final project of Comprehensive Practice Ability Training of Measurement and 
 
 ## Project goal:
 
-See in requirement.pdf
+See in requirements.pdf
