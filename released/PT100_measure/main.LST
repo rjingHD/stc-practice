@@ -1,0 +1,484 @@
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil4for51\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "STC15F2K60S2.h"
+   2          #include "intrins.h"
+   3          
+   4          #define ADC_POWER   0x80    //ADCµçÔ´¿ØÖÆÎ»
+   5          #define ADC_FLAG    0x10    //ADCÍê³É±êÖ¾Î»
+   6          #define ADC_START   0x08    //ADCÆô¶¯¿ØÖÆÎ»
+   7          #define ADC_SPEED0  0x00    //ADC×ª»»ËÙ¶È£¬Ò»´Î×ª»»ÐèÒª540¸öÊ±ÖÓ
+   8          #define ADC_SPEED1  0x20    //ADC×ª»»ËÙ¶È£¬Ò»´Î×ª»»ÐèÒª360¸öÊ±ÖÓ
+   9          #define ADC_SPEED2  0x40    //ADC×ª»»ËÙ¶È£¬Ò»´Î×ª»»ÐèÒª180¸öÊ±ÖÓ
+  10          #define ADC_SPEED3  0x60    //ADC×ª»»ËÙ¶È£¬Ò»´Î×ª»»ÐèÒª90¸öÊ±ÖÓ
+  11            
+  12          /*ÊýÂë¹Ü¶ÎÂë±í  µÍµçÆ½ÓÐÐ§*///0    1    2        3       4         5    6       7        8        9             A        B    E   F     -    Ãð
+  13          unsigned char code Table[]={0xC0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90,0x88,0x83,0x86,0x8E,0xBF,0xF
+             -F};// ÊýÂë¹Ü×ª»»×Ö±í 0-9,A-F GHPU ,-,Ãð
+  14          unsigned char Showtemp[4]={0,0,0,0};    //ÊýÂë¹ÜÏÔÊ¾ÏÔÊ¾Êý×é
+  15          unsigned char MAXMINtemp[3]={0,0,0};    //×î´óÖµ×îÐ¡ÖµÉè¶¨ÔÝ´æÊý×é
+  16          
+  17          char loca_count =0;      //
+  18          char signal = 0;         //·ûºÅ±äÁ¿
+  19          float maxmum = 40;       //ÎÂ¶È×î´óÖµ
+  20          float minmum = 20;       //ÎÂ¶È×îÐ¡Öµ
+  21          int maxmum1 = 0;         //×î´óÖµÔÝ´æ
+  22          int minmum1 = 0;     //×îÐ¡ÖµÔÝ´æ
+  23          char flag1 = 0;           
+  24          char error = 0;      //´íÎó×´Ì¬¼ì²â
+  25          
+  26          float  VCC_measure  = 0;    //µçÑ¹²âÁ¿Öµ±äÁ¿
+  27          float temp_result = 0;          //ÎÂ¶È²âÁ¿Öµ±äÁ¿
+  28          int voltage_2_5v_ad = 0;
+  29          unsigned char Ledcount = 0;    //ÊýÂë¹ÜÏÔÊ¾¼ÆÊý
+  30          unsigned char keycount = 0;    //Þô¼üÏû¶¶¶¨Ê±20ms¼ÆÊý
+  31          unsigned char keystatus = 0;   //Þô¼üÞôÏÂ×´Ì¬±äÁ¿ 
+  32          unsigned char key = 0;             // Þô¼üÑ­»·±äÁ¿
+  33          unsigned char key_final = 0;   //Þô¼üÌ§Æðºó×îÖÕÖ´ÐÐ±äÁ¿
+  34          char mood = 0;                 //ÏµÍ³¹¤×÷Ä£Ê½    0²âÎÂ   1µçÑ¹
+  35          char sleep_flag = 0;           //ÐÝÃß±êÖ¾
+  36          char sleep_flag1 = 0;
+  37          char turn_start =1;                        //
+  38          
+  39          char alarm_mood = 0;               //ÎÂ¶ÈÉÏÏÂÏÞ±¨¾¯Ä£Ê½Ñ¡Ôñ
+  40          
+  41          
+  42          float code PT100[12][2]={
+  43          {25,0.620},{30,0.89},{35,1.18},{40,1.46},{45,1.75},{50,2.01},{55,2.37},{60,2.66},{65,2.95},{70,3.335},{75,
+             -3.60},{80,3.90}
+  44          };//PT100±í
+  45          sbit LED1 = P4^2;
+  46          sbit LED2 = P4^4;
+  47          sbit KEY3 = P3^4;
+  48          sbit KEY2 = P3^5;
+  49          sbit KEY1 = P3^6;
+  50          sbit TURN1 = P2^7;
+  51          sbit TURN2 = P2^6;
+  52          sbit TURN3 = P2^5;
+  53          sbit TURN4 = P2^4;
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 2   
+
+  54          
+  55          /******************************
+  56          º¯ÊýËµÃ÷£ºÑÓÊ±º¯Êý  1-65535ºÁÃë
+  57          Èë¿Ú²ÎÊý£ºms=ÑÓÊ±ºÁÃëÊý
+  58          ³ö¿Ú²ÎÊý£ºÎÞ
+  59          ******************************/
+  60          void Delay_MS(unsigned int ms)
+  61          {
+  62   1          unsigned char i, j;
+  63   1          _nop_();
+  64   1          while(ms--)
+  65   1          {
+  66   2              i = 6;  j = 210;
+  67   2              while (--i)
+  68   2              while (--j);
+  69   2          }
+  70   1      }
+  71           
+  72          /******************************
+  73          º¯ÊýËµÃ÷£º³õÊ¼»¯ADC¼Ä´æÆ÷£¬ÉèÖÃP1.6ÎªADCÊäÈë¹¦ÄÜ
+  74          Èë¿Ú²ÎÊý£ºÎÞ
+  75          ³ö¿Ú²ÎÊý£ºÎÞ
+  76          ******************************/
+  77          void Init_ADC(void)
+  78          {
+  79   1          P1M1 = 0xFF;
+  80   1              P1M0 = 0x00;
+  81   1          P1ASF = 0x40;       //´ò¿ªP1.6¿ÚµÄADC¹¦ÄÜ
+  82   1          //P1 &= 0xBF;         //ÉèÖÃP1.6¿ÚÊä³öµÍµçÆ½È·±£ÄÜ²É¼¯µ½Íâ²¿µçÆ½ÐÅºÅ
+  83   1              //P1 = 0x37;
+  84   1          ADC_RES = 0;        //ÇåµôADC×ª»»½á¹û¼Ä´æÆ÷
+  85   1          ADC_CONTR = ADC_POWER | ADC_SPEED3; //Ê¹ÄÜA/D¹©µç£¬ÉèÖÃ×ª»»ËÙ¶È90T
+  86   1      }
+  87          
+  88          /******************************
+  89          º¯ÊýËµÃ÷£º²éÑ¯·½Ê½¶ÁÈ¡ADC×ª»»½á¹û
+  90          Èë¿Ú²ÎÊý£ºchannel  ADC²ÉÑùÍ¨µÀ
+  91          ³ö¿Ú²ÎÊý£ºresult   ADC_RES ADC×ª»»½á¹û
+  92          ******************************/
+  93          unsigned int Get_AD(unsigned char channel)
+  94          {
+  95   1          unsigned int result;
+  96   1          ADC_RES = 0;    
+  97   1          ADC_RESL= 0;//ÇåµôADC×ª»»½á¹û¼Ä´æÆ÷
+  98   1          ADC_CONTR =ADC_POWER|ADC_SPEED0|ADC_START|channel;//ÅäÖÃADC£¬ÉèÖÃ×ª»»Í¨µÀ£¬Æô¶¯×ª»»
+  99   1          _nop_();    _nop_();
+ 100   1          _nop_();    _nop_();            //µÈ´ýÉèÖÃADC_POWERÍê±Ï
+ 101   1          while (!(ADC_CONTR & ADC_FLAG));//¶ÁÈ¡×ª»»Íê±Ï±êÖ¾Î»ADC_FLAG
+ 102   1          ADC_CONTR &= ~ADC_FLAG;         //Çå³ýADC_FLAG±êÖ¾Î»
+ 103   1          result = ADC_RES<<2|ADC_RESL;   //¶ÁÈ¡10Î»×ª»»½á¹û±£´æµ½result
+ 104   1          return result;                  //·µ»ØADC×ª»»½á¹û10Î»
+ 105   1      }
+ 106          
+ 107          /******************************
+ 108          º¯ÊýËµÃ÷£ºµçÑ¹Öµ²âÁ¿º¯Êý
+ 109          Èë¿Ú²ÎÊý£ºÎÞ
+ 110          ³ö¿Ú²ÎÊý£ºvoltage ¼ÆËãºóµÃµ½µÄµçÑ¹Öµ
+ 111          ******************************/
+ 112          float Voltage_Measure(void)
+ 113          {        int   i = 0,j = 0;
+ 114   1           float voltage = 0;
+ 115   1               int voltage_AD_avg = 0;          //AD²ÉÑùÆ½¾ùÖµ
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 3   
+
+ 116   1               unsigned int voltage_std_AD = 0;
+ 117   1               for(j=0;j<10;j++)                               //10´ÎÇóÆ½¾ù ²ÉÑù¼ä¸ô1ms
+ 118   1                {
+ 119   2                        voltage_std_AD = Get_AD(7);
+ 120   2                        Delay_MS(1);                                                     //²ÉÑù¼ä¸ô1ms
+ 121   2                        voltage_AD_avg += voltage_std_AD;
+ 122   2                }
+ 123   1               voltage_AD_avg = voltage_AD_avg/10;    //  ³ý10ÇóÆ½¾ù
+ 124   1               //voltage = (1024/(float)voltage_std_AD )*2.5;
+ 125   1               voltage = (1067/(float)voltage_AD_avg )*2.5;
+ 126   1               return voltage; 
+ 127   1      }
+ 128          
+ 129          float Voltage_Measure2_5v_ad(void)
+ 130          {        int   i = 0,j = 0;
+ 131   1           float voltage = 0;
+ 132   1               int voltage_AD_avg = 0;          //AD²ÉÑùÆ½¾ùÖµ
+ 133   1               unsigned int voltage_std_AD = 0;
+ 134   1               for(j=0;j<10;j++)                               //10´ÎÇóÆ½¾ù ²ÉÑù¼ä¸ô1ms
+ 135   1                {
+ 136   2                        voltage_std_AD = Get_AD(7);
+ 137   2                        Delay_MS(1);                                                     //²ÉÑù¼ä¸ô1ms
+ 138   2                        voltage_AD_avg += voltage_std_AD;
+ 139   2                }
+ 140   1               voltage_AD_avg = voltage_AD_avg/10;    //  ³ý10ÇóÆ½¾ù
+ 141   1               return voltage_AD_avg; 
+ 142   1      }
+ 143          
+ 144          /******************************
+ 145          º¯ÊýËµÃ÷£ºÎÂ¶ÈÖµ²âÁ¿º¯Êý    Ê¹ÓÃPT100£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£¡£
+             -¡£¡£¡£¡£¡£¡£¡£¡£¡£¡
+ 146          Èë¿Ú²ÎÊý£ºÎÞ
+ 147          ³ö¿Ú²ÎÊý£ºtemperature ¼ÆËãºóµÃµ½µÄÎÂ¶ÈÖµ
+ 148          ******************************/
+ 149          float Temp_Measure_PT100(int voltage_std_ad)
+ 150          {         int   i = 0,j = 0;
+ 151   1            unsigned int voltage_AD = 0;        //±¾´Î²ÉÑùADÖµ
+ 152   1                long int voltage_AD_avg = 0;    //AD²ÉÑùÆ½¾ùÖµ
+ 153   1                float voltage = 0;              //¸ù¾ÝadÇó³öµÄµçÑ¹Öµ ²»ÀûÓÃµçÔ´µçÑ¹µÄÇó·¨
+ 154   1                float temperature = 0;                  //ÎÂ¶ÈÖµ
+ 155   1                long float resistance = 0;
+ 156   1                for(j=0;j<10;j++)                              //10´ÎÇóÆ½¾ù ²ÉÑù¼ä¸ô1ms
+ 157   1                {
+ 158   2                        voltage_AD = Get_AD(3);    //PT100Á¬½ÓÍ¨µÀ2
+ 159   2                        Delay_MS(1);                                                     //²ÉÑù¼ä¸ô1ms
+ 160   2                        voltage_AD_avg += voltage_AD;
+ 161   2                }
+ 162   1                
+ 163   1                voltage_AD_avg = voltage_AD_avg/10;    //  ³ý10ÇóÆ½¾ù 
+ 164   1                if (voltage_AD_avg <5)                                 //´«¸ÐÆ÷Î´Á¬½ÓÅÐ¶Ï  Èç¹ûÃ»µçÑ¹ÔòÃ»ÓÐÁ¬½Ó
+ 165   1                {error = 1;}
+ 166   1                else
+ 167   1                {error = 0;}
+ 168   1                voltage = ((float)voltage_AD_avg/(float)voltage_std_ad)*2.5;
+ 169   1      //        resistance = (6200*(long float)voltage_AD_avg+10057565.6)/(121177.812-(long float)voltage_AD_avg);      
+             - //¼ÆËãµç×èÖµ ¸ù¾ÝÂúµçÑ¹adÎª1024
+ 170   1      
+ 171   1                for(i=0; i<11; i++)                                                                                                      //ÂÖÑ¯·¨²é±í
+ 172   1                {
+ 173   2                   if(( voltage >= PT100[i][1]) && ( voltage < PT100[i+1][1]) )         //|| (resistance>=NTC[i][1])
+ 174   2                         {
+ 175   3                                      temperature = PT100[i][0] + (voltage - PT100[i][1])/(PT100[i+1][1]-PT100[i][1])*5;break;          //ÏßÐÔ²å
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 4   
+
+             -Öµ·¨
+ 176   3                         }
+ 177   2                       else continue;
+ 178   2                }               
+ 179   1                return temperature;
+ 180   1      //        return voltage_AD_avg;
+ 181   1      //        return voltage;                   
+ 182   1      }
+ 183          
+ 184          /******************************
+ 185          º¯ÊýËµÃ÷£ºÊý×ª»»Îª4Î»ÊýÂë¹ÜÏÔÊ¾Âë
+ 186          Èë¿Ú²ÎÊý£ºdat Ðè×ª»¯µÄÊý×Ö
+ 187          ³ö¿Ú²ÎÊý£ºÎÞ ²Ù×÷¶ÔÏóÎªShowtemp[4]
+ 188          ******************************/
+ 189          void LED_Translate(float dat)
+ 190          {
+ 191   1          int data1 = 0;
+ 192   1              
+ 193   1              if ((dat<10)&&(dat>-10))
+ 194   1              {
+ 195   2                      data1 = (int)(dat*100);
+ 196   2                              if(dat >= 0)    
+ 197   2                              {Showtemp[0] = 0xFF;}                      //ÊýÂë¹ÜµÚ1Î»ÏÔÊ¾ ·ûºÅÎ»
+ 198   2                              if(dat < 0)     
+ 199   2                              {Showtemp[0] = 0xBF;
+ 200   3                              data1 = 0-data1;}
+ 201   2                      Showtemp[1] =  Table[(data1/100)]&0x7F;       //¸öÎ»ÊýÏÔÊ¾  ¼ÓÐ¡Êýµã                                            
+ 202   2                      Showtemp[2] =  Table[data1%100/10];         //Ð¡ÊýµãºóÒ»Î»ÏÔÊ¾          
+ 203   2                      Showtemp[3] =  Table[data1%10];                   //Ð¡ÊýµãºóÁ½Î»ÏÔÊ¾
+ 204   2          }
+ 205   1              else if ((dat<100)&&(dat>-100))
+ 206   1              {
+ 207   2                      data1 = (int)(dat*10);
+ 208   2                              if(dat >= 0)    
+ 209   2                              {Showtemp[0] = 0xFF;}                           //ÊýÂë¹ÜµÚ1Î»ÏÔÊ¾       ·ûºÅÎ»
+ 210   2                              if(dat < 0)     
+ 211   2                              {Showtemp[0] = 0xBF;
+ 212   3                              data1 = 0-data1;}
+ 213   2                      Showtemp[1] =  Table[data1/100];                 //Ê®Î»ÊýÏÔÊ¾                                   
+ 214   2                      Showtemp[2] =  Table[data1%100/10]&0x7F;     //¸öÎ»ÊýÏÔÊ¾  ¼ÓÐ¡Êýµã          
+ 215   2                      Showtemp[3] =  Table[data1%10];                      //Ð¡ÊýµãºóÒ»Î»ÏÔÊ¾
+ 216   2          }
+ 217   1              else if ((dat>=100)&&(dat<1000))
+ 218   1              {
+ 219   2                       data1 = (int)(dat*10);
+ 220   2                       Showtemp[0] =  Table[data1/1000];                //°ÙÎ»ÊýÏÔÊ¾
+ 221   2                       Showtemp[1] =  Table[data1%1000/100];            //Ê®Î»ÊýÏÔÊ¾                                  
+ 222   2                       Showtemp[2] =  Table[data1%100/10]&0x7F;     //¸öÎ»ÊýÏÔÊ¾  ¼ÓÐ¡Êýµã          
+ 223   2                       Showtemp[3] =  Table[data1%10];                      //Ð¡ÊýµãºóÒ»Î»ÏÔÊ¾
+ 224   2              }
+ 225   1              else if (dat>=1000)
+ 226   1              {
+ 227   2                       Showtemp[0] =  Table[(int)dat/1000];      //Ç§Î»ÊýÏÔÊ¾
+ 228   2                       Showtemp[1] =  Table[(int)dat%1000/100];   //°ÙÎ»ÊýÏÔÊ¾                                        
+ 229   2                       Showtemp[2] =  Table[(int)dat%100/10];     //Ê®Î»ÊýÏÔÊ¾
+ 230   2                       Showtemp[3] =  Table[(int)dat%10];                     //¸ö
+ 231   2              }                                               
+ 232   1      }
+ 233          
+ 234          
+ 235          /******************************
+ 236          º¯ÊýËµÃ÷£ºÊýÂë¹ÜÈ«Ãð ÎÞÐè½øÈëÖÐ¶ÏÖ´ÐÐ È«²¿ ËÄ¸öÎ» À­¸ß
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 5   
+
+ 237          Èë¿Ú²ÎÊý£ºÎÞ
+ 238          ³ö¿Ú²ÎÊý£ºÎÞ 
+ 239          ******************************/
+ 240          void LED_Clean(void)             //LEDµÆÈ«Ãðº¯Êý
+ 241          {       int ii = 0;
+ 242   1              Showtemp[0] = 0xFF;     
+ 243   1              Showtemp[1] = 0xFF; 
+ 244   1              Showtemp[2] = 0xFF; 
+ 245   1              Showtemp[3] = 0xFF;
+ 246   1              for(ii=0; ii<4; ii++)
+ 247   1              {
+ 248   2                  P2 = 0x0F;               //¹Ø±ÕËùÓÐÊýÂë¹ÜÑ¡Í¨
+ 249   2              P0 = Showtemp[ii];       //ËÍ¶ÎÂë µÍµçÆ½ÓÐÐ§
+ 250   2              P2 = ~(0x01<<ii);    }   //Ñ¡ÔñÎ»Ñ¡
+ 251   1      }
+ 252          /******************************
+ 253          º¯ÊýËµÃ÷£ºÞô¼üÉ¨Ãèº¯Êý ÖÐ¶ÏÖ´ÐÐ 
+ 254          Èë¿Ú²ÎÊý£ºÎÞ   È«¾Ö±äÁ¿   keystatus  keycount  key_final
+ 255          ³ö¿Ú²ÎÊý£ºÎÞ 
+ 256          ******************************/
+ 257          void key_scan(void)
+ 258          {
+ 259   1              if (keystatus == 0)                      //Þô¼üÞôÏÂ
+ 260   1                      {                   
+ 261   2                              if (KEY1 == 0)
+ 262   2                              keystatus =1;
+ 263   2                              if (KEY2 == 0)
+ 264   2                              keystatus =2;
+ 265   2                              if (KEY3 == 0)
+ 266   2                              keystatus =3; 
+ 267   2                      }
+ 268   1              else
+ 269   1              {           
+ 270   2                      keycount++;
+ 271   2                      if(keycount==50)                        //Ïû¶¶¼ì²â
+ 272   2                      {
+ 273   3                         keycount = 0;
+ 274   3                         if(keystatus == 1)
+ 275   3                                {if (KEY1 == 0)
+ 276   4                                        key = 1;}
+ 277   3                         if(keystatus == 2)
+ 278   3                                {if (KEY2 == 0)
+ 279   4                                        key = 2;}
+ 280   3                         if(keystatus == 3)
+ 281   3                                {if (KEY3 == 0)
+ 282   4                                        key = 3;}
+ 283   3                         keystatus =0;
+ 284   3                      }
+ 285   2                      
+ 286   2              }
+ 287   1         if(key == 1)                                         //Þô¼üÌ§ÆðÈ·ÈÏ  key_finalÖÃÎ»´ú±íÒ»´ÎÞô¼üÎïÀíÒâÒåÍê³É
+ 288   1                {if (KEY1 == 1)
+ 289   2                        {key_final = 1;key = 0;}}
+ 290   1         if(key == 2)
+ 291   1                {if (KEY2 == 1)
+ 292   2                        {key_final = 2;key = 0;}}
+ 293   1         if(key == 3)
+ 294   1                {if (KEY3 == 1)
+ 295   2                        {key_final = 3;key = 0;}}
+ 296   1      }
+ 297          
+ 298          /******************************
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 6   
+
+ 299          º¯ÊýËµÃ÷£º¶¨Ê±Æ÷0³õÊ¼»¯  16Î»¶¨Ê±Æ÷×Ô¶¯ÖØ×°ÔØÄ£Ê½
+ 300          Èë¿Ú²ÎÊý£ºÎÞ   
+ 301          ³ö¿Ú²ÎÊý£ºÎÞ 
+ 302          ******************************/
+ 303          void Timer0Init(void)           //500Î¢Ãë@11.0592MHz
+ 304          {
+ 305   1              AUXR |= 0x80;           //¶¨Ê±Æ÷Ê±ÖÓ1TÄ£Ê½
+ 306   1              TMOD &= 0xF0;           //ÉèÖÃ¶¨Ê±Æ÷Ä£Ê½
+ 307   1      
+ 308   1              TL0 = 0x66;                 //ÉèÖÃ¶¨Ê±³õÖµ
+ 309   1              TH0 = 0xEA;                 //ÉèÖÃ¶¨Ê±³õÖµ
+ 310   1              TF0 = 0;                //Çå³ýTF0±êÖ¾
+ 311   1              TR0 = 1;                    //¶¨Ê±Æ÷0¿ªÊ¼¼ÆÊ±
+ 312   1      }
+ 313          
+ 314          /******************************
+ 315          º¯ÊýËµÃ÷£ºÍâ²¿ÖÐ¶Ï2ÖÐ¶Ï·þÎñº¯Êý  ÐÝÃß±êÖ¾ÖÃÎ»ºÍÈ¡Ïû
+ 316          Èë¿Ú²ÎÊý£ºÎÞ   
+ 317          ³ö¿Ú²ÎÊý£ºÎÞ   ÐÞ¸ÄÈ«¾Ö±äÁ¿sleep_flag
+ 318          ******************************/
+ 319          void input2_ISR (void) interrupt 10                   //Íâ²¿ÖÐ¶Ï2
+ 320          {
+ 321   1           Delay_MS(25);
+ 322   1               if (KEY1 == 0)           
+ 323   1               {
+ 324   2               if(sleep_flag == 0)
+ 325   2                      {sleep_flag = 1;}
+ 326   2               else if(sleep_flag == 1)
+ 327   2                  sleep_flag = 0;
+ 328   2               } 
+ 329   1      }
+ 330          
+ 331          /******************************
+ 332          º¯ÊýËµÃ÷£º¶¨Ê±Æ÷0ÖÐ¶Ï·þÎñº¯Êý  ÊýÂë¹ÜÉ¨Ãè  Þô¼üÉ¨Ãè
+ 333          Èë¿Ú²ÎÊý£ºÎÞ   
+ 334          ³ö¿Ú²ÎÊý£ºÎÞ   ÐÞ¸ÄÈ«¾Ö±äÁ¿sleep_flag
+ 335          ******************************/
+ 336          //Time0É¨ÃèLEDÏÔÊ¾Çý¶¯£¬¼ÆÊ±,500us
+ 337          void time0(void) interrupt 1
+ 338          {
+ 339   1          if(4==++Ledcount)              //ÊýÂë¹ÜÉ¨Ãè
+ 340   1          {Ledcount=0;
+ 341   2              }
+ 342   1          P2 = 0x0F;                 //¹Ø±ÕËùÓÐÊýÂë¹ÜÑ¡Í¨
+ 343   1          P0 = Showtemp[Ledcount];       //ËÍ¶ÎÂë µÍµçÆ½ÓÐÐ§
+ 344   1          P2 = ~(0x01<<Ledcount);       //Ñ¡ÔñÎ»Ñ¡
+ 345   1      
+ 346   1          key_scan();                            //Þô¼üÉ¨Ãè
+ 347   1      }
+ 348          /******************************
+ 349          º¯ÊýËµÃ÷£º¹¤×÷Ä£Ê½Ñ¡Ôñ 0²âÎÂ¶È 1²âµçÑ¹
+ 350          Èë¿Ú²ÎÊý£ºÎÞ   
+ 351          ³ö¿Ú²ÎÊý£ºÎÞ  
+ 352          ******************************/
+ 353          void mood_choose_work(void)
+ 354          {
+ 355   1              
+ 356   1      
+ 357   1                  LED1 = 1;
+ 358   1                      LED2 = 1;                                 //Ä£Ê½2µÆÈ«Ãð
+ 359   1                      voltage_2_5v_ad = Voltage_Measure2_5v_ad();//²â2.5v±ê×¼µçÑ¹
+ 360   1                      temp_result = Temp_Measure_PT100(voltage_2_5v_ad);      //²âÎÂ¶È
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 7   
+
+ 361   1                      LED_Translate(temp_result);                     //×ª»»³öÊýÂë¹ÜÏÔÊ¾Öµ
+ 362   1               
+ 363   1      }
+ 364          
+ 365          /******************************
+ 366          º¯ÊýËµÃ÷£ºÐÝÃß×´Ì¬¼ì²â Ö÷Ñ­»·µ÷ÓÃ 
+ 367          Èë¿Ú²ÎÊý£ºÎÞ   
+ 368          ³ö¿Ú²ÎÊý£ºÎÞ  
+ 369          ******************************/
+ 370          void sleep_check(void)
+ 371          {
+ 372   1          if((sleep_flag == 1)||(sleep_flag1 == 1))    //sleep_flag Þô¼ü½øÈë   sleep_flag1 ²¦Âë¿ª¹Ø½øÈë
+ 373   1              {
+ 374   2                      if(sleep_flag1 == 1)
+ 375   2                      {turn_start = 0;sleep_flag1 = 0;}               
+ 376   2                      LED_Clean();       //¹Ø±ÕÊýÂë¹Ü
+ 377   2                      LED2 = 1;LED1 = 0;Delay_MS(200);LED1 = 1;Delay_MS(200);LED1 = 0;Delay_MS(200);LED1 = 1;            //ÐÝÃßÇ°ºìµÆ
+             -ÉÁË¸        
+ 378   2                      PCON = 0x02;                                       //½øÈëÐÝÃß  ³ÌÐòÍ£ÔÚ´Ë´¦
+ 379   2                      _nop_();_nop_();_nop_();                   //»½ÐÑºóÖ´ÐÐµÄ¿ÕÖ¸Áî
+ 380   2                      LED2 = 0;Delay_MS(200);LED2 = 1;Delay_MS(200);LED2 = 0;Delay_MS(200);LED2 = 1;Delay_MS(200);LED2 = 0;  /
+             -/»½ÐÑºóÂÌµÆÉÁË¸
+ 381   2              }
+ 382   1      }
+ 383          
+ 384          /******************************
+ 385          º¯ÊýËµÃ÷£ºÞô¼ü×´Ì¬¼ì²â Ö÷Ñ­»·µ÷ÓÃ       Þô¼üÕý³£¹¤×÷ÞôÏÂÖ´ÐÐ³ÌÐòÔÚ´Ë´¦
+ 386          Èë¿Ú²ÎÊý£ºÎÞ   
+ 387          ³ö¿Ú²ÎÊý£ºÎÞ  
+ 388          ******************************/
+ 389          void key_check(void)
+ 390          {
+ 391   1              if(key_final == 1)   // Þô¼ü1ÞôÏÂÖ´ÐÐ³ÌÐòÎ»ÖÃ
+ 392   1              {}
+ 393   1              if(key_final == 2)       // Þô¼ü2ÞôÏÂÖ´ÐÐ³ÌÐòÎ»ÖÃ
+ 394   1              {if(mood < 2) 
+ 395   2                    {mood ++;}             
+ 396   2               else{mood = 0;}
+ 397   2               }
+ 398   1              if(key_final == 3)       // Þô¼ü3ÞôÏÂÖ´ÐÐ³ÌÐòÎ»ÖÃ
+ 399   1              {}
+ 400   1              key_final = 0;
+ 401   1      }
+ 402          
+ 403          /******************************
+ 404          º¯ÊýËµÃ÷£ºÞô¼üÉèÖÃ²ÎÊý ´¦Àí³ÌÐò ÉèÖÃ×î´óÖµ×îÐ¡Öµ
+ 405          Èë¿Ú²ÎÊý£ºÎÞ   È«¾Ö±äÁ¿ MAXMINtemp[]       loca_count   signal
+ 406          ³ö¿Ú²ÎÊý£º numresult ×î´óÖµ×îÐ¡Öµ¼ÆËãÖµ
+ 407          ******************************/
+ 408          float set_num_calculate()
+ 409          {
+ 410   1              float numresult = 0;
+ 411   1              numresult = 10*(float)MAXMINtemp[0] + (float)MAXMINtemp[1] + 0.1*(float)MAXMINtemp[2];
+ 412   1              if (signal == 1)
+ 413   1              numresult = 0 - numresult;
+ 414   1              return numresult;
+ 415   1      }
+ 416          
+ 417          void main(void)
+ 418          {  
+ 419   1         WDT_CONTR =0x3E;
+ 420   1         Init_ADC();       //³õÊ¼»¯ADC 
+C51 COMPILER V9.02   MAIN                                                                  06/21/2018 02:32:56 PAGE 8   
+
+ 421   1         Timer0Init();     //ÉèÖÃT0ÓÃ×÷ÊýÂë¹ÜÏÔÊ¾¶¨Ê±500usÉ¨Ãè£¬ÖÐ¶ÏÄ£Ê½
+ 422   1         ET0=1;            //ÔÊÐíT0¶¨Ê±ÖÐ¶Ï
+ 423   1         INT_CLKO |= 0x10; //ÔÊÐíÍâ²¿ÖÐ¶Ï2
+ 424   1         EA=1;                         //ÖÐ¶Ï×ÜÊ¹ÄÜ
+ 425   1         Ledcount=0;      //LEDÉ¨ÃèÏÔÊ¾¼ÆÊýÓÃ
+ 426   1         P0M0=0xff;       //ÍÆÍìÊä³öÇý¶¯¹²Òõ¼«ÊýÂë¹Ü  
+ 427   1         KEY1 = 1;KEY2 = 1;KEY3 = 1;                   //À­¸ßËùÓÐÞô¼ü  µÍµçÆ½ÓÐÐ§
+ 428   1         TURN1 = 1;TURN2 = 1;TURN3 = 1;TURN4 = 1;                //À­¸ßËùÓÐ²¦Âë¿ª¹Ø µÍµçÆ½ÓÐÐ§
+ 429   1                     
+ 430   1         while(1)
+ 431   1         {    
+ 432   2                      
+ 433   2                      sleep_check();                     //ÐÝÃßÄ£Ê½¼ì²â
+ 434   2              key_check();                       //Þô¼üÊÇ·ñÞôÏÂ¼ì²â
+ 435   2                      mood_choose_work();                //¹¤×÷Ä£Ê½Ñ¡Ôñ²¢work £¨²âÁ¿£©
+ 436   2      
+ 437   2                      Delay_MS(200);                     //ÑÓÊ±200ms
+ 438   2                      WDT_CONTR =0x3E;                   //Î¹¿´ÃÅ¹·
+ 439   2         }
+ 440   1      }                
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2129    ----
+   CONSTANT SIZE    =    112    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     43      48
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

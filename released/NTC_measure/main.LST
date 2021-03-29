@@ -1,0 +1,363 @@
+C51 COMPILER V9.01   MAIN                                                                  06/14/2018 11:30:49 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "STC15F2K60S2.h"
+   2          #include "intrins.h"
+   3          
+   4          #define STUDENT_NUMBER  3456
+   5          
+   6          #define ADC_POWER   0x80    
+   7          #define ADC_FLAG    0x10    
+   8          #define ADC_START   0x08    
+   9          #define ADC_SPEED0  0x00    //ADC转换速度 540个时钟
+  10          #define ADC_SPEED1  0x20    //ADC转换速度 360个时钟
+  11          #define ADC_SPEED2  0x40    //ADC转换速度 180个时钟
+  12          #define ADC_SPEED3  0x60    //ADC转换速度 90个时钟
+  13          
+  14          float maxmum = 33;
+  15          float minmum = 25;
+  16             
+  17          float code NTC[146][2]={
+  18          {-40,340.9281},{-39,318.8772},{-38,298.3978},{-37,279.3683},{-36,261.6769},{-35,245.2212},{-34,229.9072},{
+             --33,215.6488},{-32,202.3666},{-31,189.9878},
+  19          {-30,178.4456},{-29,167.6783},{-28,157.6292},{-27,148.246},{-26,139.4807},{-25,131.2888},{-24,123.6294},{-
+             -23,116.4648},{-22,109.76},{-21,103.4829},
+  20          {-20,97.6037},{-19,92.0947},{-18,86.9305},{-17,82.0877},{-16,77.5442},{-15,73.2798},{-14,69.2759},{-13,65.
+             -5149},{-12,61.9809},{-11,58.6587},
+  21          {-10,55.5345},{-9,52.5954},{-8,49.8294},{-7,47.2253},{-6,44.7727},{-5,42.462},{-4,40.2841},{-3,38.2307},{-
+             -2,36.294},{-1,34.4668},{0,32.7421},
+  22          {1,31.1138},{2,29.5759},{3,28.1229},{4,26.7496},{5,25.4513},{6,24.2234},{7,23.0618},{8,21.9625},{9,20.9218
+             -},{10,19.9364},
+  23          {11,19.0029},{12,18.1184},{13,17.28},{14,16.4852},{15,15.7313},{16,15.0161},{17,14.3375},{18,13.6932},{19,
+             -13.0815},{20,12.5005},
+  24          {21,11.9485},{22,11.4239},{23,10.9252},{24,10.451},{25,10},{26,9.5709},{27,9.1626},{28,8.7738},{29,8.4037}
+             -,{30,8.0512},
+  25          {31,7.7154},{32,7.3954},{33,7.0904},{34,6.7996},{35,6.5223},{36,6.2577},{37,6.0053},{38,5.7645},{39,5.5345
+             -},{40,5.315},
+  26          {41,5.1053},{42,4.905},{43,4.7136},{44,4.5307},{45,4.3558},{46,4.1887},{47,4.0287},{48,3.8758},{49,3.7294}
+             -,{50,3.5893},
+  27          {51,3.4553},{52,3.3269},{53,3.2039},{54,3.0862},{55,2.9733},{56,2.8652},{57,2.7616},{58,2.6622},{59,2.5669
+             -},{60,2.4755},
+  28          {61,2.3879},{62,2.3038},{63,2.2231},{64,2.1456},{65,2.0712},{66,1.9998},{67,1.9312},{68,1.8653},{69,1.8019
+             -},{70,1.7411},
+  29          {71,1.6826},{72,1.6264},{73,1.5723},{74,1.5203},{75,1.4703},{76,1.4222},{77,1.3759},{78,1.3313},{79,1.2884
+             -},{80,1.2471},
+  30          {81,1.2073},{82,1.169},{83,1.1321},{84,1.0965},{85,1.0623},{86,1.0293},{87,0.9974},{88,0.9667},{89,0.9372}
+             -,{90,0.9086},
+  31          {91,0.8811},{92,0.8545},{93,0.8289},{94,0.8042},{95,0.7803},{96,0.7572},{97,0.735},{98,0.7135},{99,0.6927}
+             -,{100,0.6727},
+  32          {101,0.6533},{102,0.6346},{103,0.6165},{104,0.599},{105,0.5821}
+  33          };
+  34          
+  35          unsigned char code Table[]={0xC0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90,0x88,0x83,0x86,0x8E,0xBF,0xF
+             -F};// /*数码管段码表  低电平有效*/0-9,A-F GHPU ,-,灭
+  36          unsigned char Showtemp[4]={0,0,0,0};
+  37          unsigned char Ledcount = 0;   
+  38          unsigned char keycount = 0;   
+  39          unsigned char keystatus = 0;   
+  40          unsigned char key = 0; 
+C51 COMPILER V9.01   MAIN                                                                  06/14/2018 11:30:49 PAGE 2   
+
+  41          unsigned char key_final = 0;
+  42          char mood = 0;
+  43          char mood1= 0;     //上下限状态
+  44          sbit LED1 = P4^2;
+  45          sbit LED2 = P4^4;
+  46          sbit KEY3 = P3^4;
+  47          sbit KEY2 = P3^5;
+  48          sbit KEY1 = P3^6;
+  49          
+  50          void Delay_MS(unsigned int ms)
+  51          {
+  52   1          unsigned char i, j;
+  53   1          _nop_();
+  54   1          while(ms--)
+  55   1          {
+  56   2              i = 6;  j = 210;
+  57   2              while (--i)
+  58   2              while (--j);
+  59   2          }
+  60   1      }
+  61          //AD初始化 
+  62          void Init_ADC(void)
+  63          {
+  64   1          P1ASF = 0x40;       //打开P1.6口
+  65   1          P1 &= 0xBF;         //设置P1.6口
+  66   1          ADC_RES = 0;        //清掉ADC转换
+  67   1          ADC_CONTR = ADC_POWER | ADC_SPEED3; //使能A/D
+  68   1      }
+  69          
+  70          //AD值获取
+  71          unsigned int Get_AD(unsigned char channel)
+  72          {
+  73   1          unsigned int result;
+  74   1          ADC_RES = 0;    
+  75   1          ADC_RESL= 0;//清掉ADC转换结果寄存器
+  76   1          ADC_CONTR =ADC_POWER|ADC_SPEED0|ADC_START|channel;//配置ADC
+  77   1          _nop_();    _nop_();
+  78   1          _nop_();    _nop_();            //等待设置ADC_POWER完毕
+  79   1          while (!(ADC_CONTR & ADC_FLAG));
+  80   1          ADC_CONTR &= ~ADC_FLAG;         //清除标志位
+  81   1          result = ADC_RES<<2|ADC_RESL;  
+  82   1          return result;                  //ADC转换结果
+  83   1      }
+  84          
+  85          float Voltage_Measure(void)
+  86          {        
+  87   1           float voltage = 0;
+  88   1               unsigned int voltage_std_AD = 0;
+  89   1               voltage_std_AD = Get_AD(7);
+  90   1               voltage = (1024/(float)voltage_std_AD )*2.5;
+  91   1               return voltage; 
+  92   1      }
+  93          
+  94          float Temp_Measure()
+  95          {         int   i = 0,j = 0;
+  96   1            unsigned int voltage_AD = 0;
+  97   1                long int voltage_AD_avg = 0; 
+  98   1                float voltage = 0;
+  99   1                float resistance = 0;
+ 100   1                float temperature = 0;
+ 101   1      
+ 102   1                for(j=0;j<10;j++)
+C51 COMPILER V9.01   MAIN                                                                  06/14/2018 11:30:49 PAGE 3   
+
+ 103   1                {
+ 104   2                        voltage_AD = Get_AD(6);
+ 105   2                        Delay_MS(1);
+ 106   2                        voltage_AD_avg += voltage_AD;
+ 107   2                }
+ 108   1                
+ 109   1                voltage_AD_avg = voltage_AD_avg/10;
+ 110   1                resistance = 10*(1024 - (float)voltage_AD_avg)/(float)voltage_AD_avg;
+ 111   1                for(i=0; i<145; i++)
+ 112   1                {
+ 113   2                   if((resistance<=NTC[i][1]) && (resistance>NTC[i+1][1]) )
+ 114   2                         {
+ 115   3                                temperature = NTC[i][0] + (NTC[i][1]-resistance)/(NTC[i][1]-NTC[i+1][1]);break;
+ 116   3                         }
+ 117   2                       else continue;
+ 118   2                }               
+ 119   1                return temperature;
+ 120   1      }
+ 121          
+ 122          /*
+ 123          数码管显示函数
+ 124          */
+ 125          void LED_Translate(float dat)
+ 126          {
+ 127   1          int data1 = 0;
+ 128   1              if ((dat<10)&&(dat>-10))
+ 129   1              {
+ 130   2                      data1 = (int)(dat*100);
+ 131   2                              if(dat >= 0)    
+ 132   2                              {Showtemp[0] = 0xFF;}                             //第一位灭
+ 133   2                              if(dat < 0)     
+ 134   2                              {Showtemp[0] = 0xBF;
+ 135   3                              data1 = 0-data1;}
+ 136   2                      Showtemp[1] =  Table[(data1/100)]&0x7F;       //个位数显示  加小数点                                            
+ 137   2                      Showtemp[2] =  Table[data1%100/10];           //小数点后一位显示          
+ 138   2                      Showtemp[3] =  Table[data1%10];                       //小数点后两位显示
+ 139   2          }
+ 140   1              else if ((dat<100)&&(dat>-100))
+ 141   1              {
+ 142   2                      data1 = (int)(dat*10);
+ 143   2                              if(dat >= 0)    
+ 144   2                              {Showtemp[0] = 0xFF;}                      
+ 145   2                              if(dat < 0)     
+ 146   2                              {Showtemp[0] = 0xBF;
+ 147   3                              data1 = 0-data1;}
+ 148   2                      Showtemp[1] =  Table[data1/100];                   //十位数显示                                 
+ 149   2                      Showtemp[2] =  Table[data1%100/10]&0x7F;       //个位数显示  加小数点          
+ 150   2                      Showtemp[3] =  Table[data1%10];                        //小数点后一位显示
+ 151   2          }
+ 152   1              else if ((dat>=100)&&(dat<1000))
+ 153   1              {
+ 154   2                       data1 = (int)(dat*10);
+ 155   2                       Showtemp[0] =  Table[data1/1000];                //bai位数显示
+ 156   2                       Showtemp[1] =  Table[data1/100];                 //十位数显示                                  
+ 157   2                       Showtemp[2] =  Table[data1%100/10]&0x7F;     //个位数显示  加小数点          
+ 158   2                       Showtemp[3] =  Table[data1%10];                      //小数点后一位显示
+ 159   2              }
+ 160   1              else if (dat>=1000)
+ 161   1              {
+ 162   2                       Showtemp[0] =  Table[(int)dat/1000];       //百位数显示
+ 163   2                       Showtemp[1] =  Table[(int)dat%1000/100];   //十位数显示                                        
+ 164   2                       Showtemp[2] =  Table[(int)dat%100/10];     //个位数显示
+C51 COMPILER V9.01   MAIN                                                                  06/14/2018 11:30:49 PAGE 4   
+
+ 165   2                       Showtemp[3] =  Table[(int)dat%10];                  
+ 166   2              }                                       
+ 167   1      }
+ 168          
+ 169          void key_scan(void)
+ 170          {
+ 171   1              if (keystatus == 0)               
+ 172   1                      {                   
+ 173   2                              if (KEY1 == 0)
+ 174   2                              keystatus =1;
+ 175   2                              if (KEY2 == 0)
+ 176   2                              keystatus =2;
+ 177   2                              if (KEY3 == 0)
+ 178   2                              keystatus =3; 
+ 179   2                      }
+ 180   1              else
+ 181   1              {           
+ 182   2                      keycount++;
+ 183   2                      if(keycount==50)
+ 184   2                      {
+ 185   3                         keycount = 0;
+ 186   3                         if(keystatus == 1)
+ 187   3                                {if (KEY1 == 0)
+ 188   4                                        key = 1;}
+ 189   3                         if(keystatus == 2)
+ 190   3                                {if (KEY2 == 0)
+ 191   4                                        key = 2;}
+ 192   3                         if(keystatus == 3)
+ 193   3                                {if (KEY3 == 0)
+ 194   4                                        key = 3;}
+ 195   3                         keystatus =0;
+ 196   3                      }
+ 197   2                      
+ 198   2              }
+ 199   1         if(key == 1)
+ 200   1                {if (KEY1 == 1)
+ 201   2                        {key_final = 1;key = 0;}}
+ 202   1         if(key == 2)
+ 203   1                {if (KEY2 == 1)
+ 204   2                        {key_final = 2;key = 0;}}
+ 205   1         if(key == 3)
+ 206   1                {if (KEY3 == 1)
+ 207   2                        {key_final = 3;key = 0;}}
+ 208   1      }
+ 209          
+ 210          void key_check(void)
+ 211          {
+ 212   1              if(key_final == 1)
+ 213   1              {if(mood == 1) 
+ 214   2                    mood = 0;
+ 215   2               else if(mood == 0) 
+ 216   2                    mood = 1;}
+ 217   1              if(key_final == 2)
+ 218   1              {
+ 219   2              if(mood1<2)
+ 220   2              mood1++;
+ 221   2              else mood1 = 0;
+ 222   2              }
+ 223   1              if(key_final == 3)
+ 224   1              {}
+ 225   1              key_final = 0;
+ 226   1      }
+C51 COMPILER V9.01   MAIN                                                                  06/14/2018 11:30:49 PAGE 5   
+
+ 227          
+ 228          void Timer0Init(void)           //500微秒@11.0592MHz
+ 229          {
+ 230   1              AUXR |= 0x80;           //定时器时钟1T模式
+ 231   1              TMOD &= 0xF0;           //设置定时器模式
+ 232   1              TL0 = 0x66;             //设置定时初值
+ 233   1              TH0 = 0xEA;             //设置定时初值
+ 234   1              TF0 = 0;                //清除TF0标志
+ 235   1              TR0 = 1;                //定时器0开始计时
+ 236   1      }
+ 237          
+ 238          void Timer1Init(void)           //2毫秒@11.0592MHz
+ 239          {
+ 240   1              AUXR |= 0x40;           //定时器时钟1T模式
+ 241   1              TMOD &= 0x0F;           //设置定时器模式
+ 242   1              TL1 = 0x9A;             //设置定时初值
+ 243   1              TH1 = 0xA9;             //设置定时初值
+ 244   1              TF1 = 0;                //清除TF1标志
+ 245   1              TR1 = 1;                //定时器1开始计时
+ 246   1      }
+ 247          
+ 248          //Time0扫描LED显示驱动，计时,500us
+ 249          void time0(void) interrupt 1
+ 250          {
+ 251   1          if(4==++Ledcount)
+ 252   1          {Ledcount=0;
+ 253   2              }
+ 254   1          P2 = 0x0F;                      //关闭所有数码管选通
+ 255   1          P0 = Showtemp[Ledcount];        //送段码 低电平有效
+ 256   1          P2 = ~(0x01<<Ledcount);         //选择位选
+ 257   1          key_scan();                         
+ 258   1      }
+ 259          
+ 260          void time1(void) interrupt 3
+ 261          {
+ 262   1                                      
+ 263   1      }
+ 264          
+ 265          void main(void)
+ 266          {
+ 267   1         float  VCC_measure  = 0;
+ 268   1         float temp_result = 0;
+ 269   1         
+ 270   1         Init_ADC();      //初始化ADC
+ 271   1         Timer0Init();    //设置T0用作数码管显示定时500us扫描，中断模式
+ 272   1         ET0=1;           //允许T0定时中断
+ 273   1         EA=1;
+ 274   1         Ledcount=0;      //LED扫描显示计数用
+ 275   1         P0M0=0xff;       //推挽输出驱动数码管  低电平有效 
+ 276   1         KEY1 = 1;
+ 277   1         KEY2 = 1;
+ 278   1         KEY3 = 1;
+ 279   1      
+ 280   1         LED_Translate(STUDENT_NUMBER);       
+ 281   1      
+ 282   1         Delay_MS(2000);
+ 283   1          
+ 284   1         while(1)
+ 285   1         {
+ 286   2              key_check();
+ 287   2                      if( (mood == 0) && (mood1 == 0) )
+ 288   2                      {
+C51 COMPILER V9.01   MAIN                                                                  06/14/2018 11:30:49 PAGE 6   
+
+ 289   3                              temp_result = Temp_Measure();
+ 290   3                              LED_Translate(temp_result);     
+ 291   3                              if(temp_result > maxmum )
+ 292   3                              LED2 = 0;
+ 293   3                              else LED2 = 1;
+ 294   3                              if(temp_result < minmum )
+ 295   3                              LED1 = 0;
+ 296   3                              else LED1 = 1; 
+ 297   3                      }               
+ 298   2                      if( (mood == 1) && (mood1 == 0))
+ 299   2                      {
+ 300   3                              VCC_measure = Voltage_Measure();
+ 301   3                              LED_Translate(VCC_measure);
+ 302   3                      }
+ 303   2                      if (mood1 == 1)
+ 304   2                      {
+ 305   3                              LED_Translate(maxmum);
+ 306   3                      }
+ 307   2                      if (mood1 == 2)
+ 308   2                      {
+ 309   3                              LED_Translate(minmum);
+ 310   3                      }
+ 311   2              
+ 312   2      
+ 313   2                      Delay_MS(200);     
+ 314   2         }
+ 315   1      }                
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1808    ----
+   CONSTANT SIZE    =   1184    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     19      34
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

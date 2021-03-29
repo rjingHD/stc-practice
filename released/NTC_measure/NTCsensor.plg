@@ -1,0 +1,137 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+C:\Users\SLJ\Desktop\released_by_JR\NTCsensor.uvproj
+Project File Date:  06/12/2018
+
+<h2>Output:</h2>
+Build target 'Target 1'
+assembling STARTUP.A51...
+compiling main.c...
+main.c(1): warning C318: can't open file 'STC15F2K60S2.h'
+MAIN.C(44): error C202: 'P4': undefined identifier
+MAIN.C(45): error C202: 'P4': undefined identifier
+MAIN.C(46): error C202: 'P3': undefined identifier
+MAIN.C(47): error C202: 'P3': undefined identifier
+MAIN.C(48): error C202: 'P3': undefined identifier
+MAIN.C(64): error C202: 'P1ASF': undefined identifier
+MAIN.C(65): error C202: 'P1': undefined identifier
+MAIN.C(66): error C202: 'ADC_RES': undefined identifier
+MAIN.C(67): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(74): error C202: 'ADC_RES': undefined identifier
+MAIN.C(75): error C202: 'ADC_RESL': undefined identifier
+MAIN.C(76): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(79): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(80): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(81): error C202: 'ADC_RES': undefined identifier
+MAIN.C(173): error C202: 'KEY1': undefined identifier
+MAIN.C(175): error C202: 'KEY2': undefined identifier
+MAIN.C(177): error C202: 'KEY3': undefined identifier
+MAIN.C(187): error C202: 'KEY1': undefined identifier
+MAIN.C(190): error C202: 'KEY2': undefined identifier
+MAIN.C(193): error C202: 'KEY3': undefined identifier
+MAIN.C(200): error C202: 'KEY1': undefined identifier
+MAIN.C(203): error C202: 'KEY2': undefined identifier
+MAIN.C(206): error C202: 'KEY3': undefined identifier
+MAIN.C(220): error C141: syntax error near ':'
+MAIN.C(230): error C202: 'AUXR': undefined identifier
+MAIN.C(231): error C202: 'TMOD': undefined identifier
+MAIN.C(232): error C202: 'TL0': undefined identifier
+MAIN.C(233): error C202: 'TH0': undefined identifier
+MAIN.C(234): error C202: 'TF0': undefined identifier
+MAIN.C(235): error C202: 'TR0': undefined identifier
+MAIN.C(240): error C202: 'AUXR': undefined identifier
+MAIN.C(241): error C202: 'TMOD': undefined identifier
+MAIN.C(242): error C202: 'TL1': undefined identifier
+MAIN.C(243): error C202: 'TH1': undefined identifier
+MAIN.C(244): error C202: 'TF1': undefined identifier
+MAIN.C(245): error C202: 'TR1': undefined identifier
+MAIN.C(254): error C202: 'P2': undefined identifier
+MAIN.C(255): error C202: 'P0': undefined identifier
+MAIN.C(256): error C202: 'P2': undefined identifier
+MAIN.C(272): error C202: 'ET0': undefined identifier
+MAIN.C(273): error C202: 'EA': undefined identifier
+MAIN.C(275): error C202: 'P0M0': undefined identifier
+MAIN.C(276): error C202: 'KEY1': undefined identifier
+MAIN.C(277): error C202: 'KEY2': undefined identifier
+MAIN.C(278): error C202: 'KEY3': undefined identifier
+MAIN.C(287): error C141: syntax error near '&&'
+MAIN.C(288): error C141: syntax error near '{'
+MAIN.C(292): error C202: 'LED2': undefined identifier
+MAIN.C(293): error C202: 'LED2': undefined identifier
+MAIN.C(295): error C202: 'LED1': undefined identifier
+MAIN.C(296): error C202: 'LED1': undefined identifier
+MAIN.C(298): error C141: syntax error near '&&'
+MAIN.C(299): error C141: syntax error near '{'
+Target not created
+Build target 'Target 1'
+assembling STARTUP.A51...
+compiling main.c...
+main.c(1): warning C318: can't open file 'STC15F2K60S2.h'
+MAIN.C(44): error C202: 'P4': undefined identifier
+MAIN.C(45): error C202: 'P4': undefined identifier
+MAIN.C(46): error C202: 'P3': undefined identifier
+MAIN.C(47): error C202: 'P3': undefined identifier
+MAIN.C(48): error C202: 'P3': undefined identifier
+MAIN.C(64): error C202: 'P1ASF': undefined identifier
+MAIN.C(65): error C202: 'P1': undefined identifier
+MAIN.C(66): error C202: 'ADC_RES': undefined identifier
+MAIN.C(67): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(74): error C202: 'ADC_RES': undefined identifier
+MAIN.C(75): error C202: 'ADC_RESL': undefined identifier
+MAIN.C(76): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(79): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(80): error C202: 'ADC_CONTR': undefined identifier
+MAIN.C(81): error C202: 'ADC_RES': undefined identifier
+MAIN.C(173): error C202: 'KEY1': undefined identifier
+MAIN.C(175): error C202: 'KEY2': undefined identifier
+MAIN.C(177): error C202: 'KEY3': undefined identifier
+MAIN.C(187): error C202: 'KEY1': undefined identifier
+MAIN.C(190): error C202: 'KEY2': undefined identifier
+MAIN.C(193): error C202: 'KEY3': undefined identifier
+MAIN.C(200): error C202: 'KEY1': undefined identifier
+MAIN.C(203): error C202: 'KEY2': undefined identifier
+MAIN.C(206): error C202: 'KEY3': undefined identifier
+MAIN.C(220): error C141: syntax error near ':'
+MAIN.C(230): error C202: 'AUXR': undefined identifier
+MAIN.C(231): error C202: 'TMOD': undefined identifier
+MAIN.C(232): error C202: 'TL0': undefined identifier
+MAIN.C(233): error C202: 'TH0': undefined identifier
+MAIN.C(234): error C202: 'TF0': undefined identifier
+MAIN.C(235): error C202: 'TR0': undefined identifier
+MAIN.C(240): error C202: 'AUXR': undefined identifier
+MAIN.C(241): error C202: 'TMOD': undefined identifier
+MAIN.C(242): error C202: 'TL1': undefined identifier
+MAIN.C(243): error C202: 'TH1': undefined identifier
+MAIN.C(244): error C202: 'TF1': undefined identifier
+MAIN.C(245): error C202: 'TR1': undefined identifier
+MAIN.C(254): error C202: 'P2': undefined identifier
+MAIN.C(255): error C202: 'P0': undefined identifier
+MAIN.C(256): error C202: 'P2': undefined identifier
+MAIN.C(272): error C202: 'ET0': undefined identifier
+MAIN.C(273): error C202: 'EA': undefined identifier
+MAIN.C(275): error C202: 'P0M0': undefined identifier
+MAIN.C(276): error C202: 'KEY1': undefined identifier
+MAIN.C(277): error C202: 'KEY2': undefined identifier
+MAIN.C(278): error C202: 'KEY3': undefined identifier
+MAIN.C(292): error C202: 'LED2': undefined identifier
+MAIN.C(293): error C202: 'LED2': undefined identifier
+MAIN.C(295): error C202: 'LED1': undefined identifier
+MAIN.C(296): error C202: 'LED1': undefined identifier
+Target not created
+Build target 'Target 1'
+assembling STARTUP.A51...
+compiling main.c...
+MAIN.C(220): error C141: syntax error near ':'
+Target not created
+Build target 'Target 1'
+assembling STARTUP.A51...
+compiling main.c...
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?TIMER1INIT?MAIN
+Program Size: data=56.0 xdata=0 code=4610
+creating hex file from "NTCsensor"...
+"NTCsensor" - 0 Error(s), 1 Warning(s).

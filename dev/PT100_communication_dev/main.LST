@@ -1,0 +1,798 @@
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil4for51\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "STC15F2K60S2.h"
+   2          #include "intrins.h"
+   3          
+   4          #define ADC_POWER   0x80    //ADC电源控制位
+   5          #define ADC_FLAG    0x10    //ADC完成标志位
+   6          #define ADC_START   0x08    //ADC启动控制位
+   7          #define ADC_SPEED0  0x00    //ADC转换速度，一次转换需要540个时钟
+   8          #define ADC_SPEED1  0x20    //ADC转换速度，一次转换需要360个时钟
+   9          #define ADC_SPEED2  0x40    //ADC转换速度，一次转换需要180个时钟
+  10          #define ADC_SPEED3  0x60    //ADC转换速度，一次转换需要90个时钟
+  11          
+  12          unsigned char COMNUMBER = 0;    //本机设备编号变量
+  13          unsigned char COMMAX = 8;               //从机最大地址变量
+  14          unsigned char slave = 0;                //从机轮询计数变量
+  15          unsigned char rdata = 0;            //接收数据缓存
+  16          unsigned char comnumber_last = 100;
+  17          /*数码管段码表  低电平有效*///0    1    2        3       4         5    6       7        8        9             A        B    E   F     -    灭
+  18          unsigned char code Table[]={0xC0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90,0x88,0x83,0x86,0x8E,0xBF,0xF
+             -F};// 数码管转换字表 0-9,A-F GHPU ,-,灭
+  19          unsigned char Showtemp[4]={0,0,0,0};    //数码管显示显示数组
+  20          
+  21          unsigned char Sendtemp[3]={0,0,0};    //串口传输数组
+  22          unsigned char Receivetemp[3]={0,0,0}; //串口接收数组
+  23          char senduart_count = 0;                          //发送字节计数
+  24          char receiveuart_count = 0;                       //接收字节计数
+  25          unsigned char *datapointer = 0 ;          //发送数据指针
+  26          unsigned char *rdatapointer = 0 ;         //接收数据指针                                                     
+  27          unsigned char send_finish = 0;        //485数据全部发送完成标志
+  28          unsigned char receive_finish = 0;         //485数据全部接收完成标志
+  29          
+  30          unsigned char turn1count = 0;      //拨码开关1状态
+  31          unsigned char turn2count = 0;      //拨码开关2状态
+  32          unsigned char turn3count = 0;      //拨码开关3状态
+  33          unsigned char turn4count = 0;      //拨码开关4状态
+  34          char loca_count =0;      //
+  35          char signal = 0;         //符号变量                                                                                                            
+  36          char error = 0;      //错误状态检测
+  37          
+  38          float  VCC_measure  = 0;    //电压测量值变量
+  39          float temp_result = 0;          //温度测量值变量
+  40          float temp_result1 = 0;         //温度测量值变量
+  41          int voltage_2_5v_ad = 0;
+  42          unsigned char Ledcount = 0;    //数码管显示计数
+  43          unsigned char keycount = 0;    //摁键消抖定时20ms计数
+  44          unsigned char keystatus = 0;   //摁键摁下状态变量 
+  45          unsigned char key = 0;             // 摁键循环变量
+  46          unsigned char key_final = 0;   //摁键抬起后最终执行变量
+  47          char mood = 0;                 //系统工作模式    0测温   1电压
+  48          char sleep_flag = 0;           //休眠标志
+  49          char sleep_flag1 = 0;
+  50          char turn_start =1;                        //
+  51          char PT100_error_flag = 0;
+  52          char alarm_mood = 0;               //温度上下限报警模式选择
+  53          
+  54          float code NTC[146][2]={
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 2   
+
+  55          {-40,340.9281},{-39,318.8772},{-38,298.3978},{-37,279.3683},{-36,261.6769},{-35,245.2212},{-34,229.9072},{
+             --33,215.6488},{-32,202.3666},{-31,189.9878},
+  56          {-30,178.4456},{-29,167.6783},{-28,157.6292},{-27,148.246},{-26,139.4807},{-25,131.2888},{-24,123.6294},{-
+             -23,116.4648},{-22,109.76},{-21,103.4829},
+  57          {-20,97.6037},{-19,92.0947},{-18,86.9305},{-17,82.0877},{-16,77.5442},{-15,73.2798},{-14,69.2759},{-13,65.
+             -5149},{-12,61.9809},{-11,58.6587},
+  58          {-10,55.5345},{-9,52.5954},{-8,49.8294},{-7,47.2253},{-6,44.7727},{-5,42.462},{-4,40.2841},{-3,38.2307},{-
+             -2,36.294},{-1,34.4668},{0,32.7421},
+  59          {1,31.1138},{2,29.5759},{3,28.1229},{4,26.7496},{5,25.4513},{6,24.2234},{7,23.0618},{8,21.9625},{9,20.9218
+             -},{10,19.9364},
+  60          {11,19.0029},{12,18.1184},{13,17.28},{14,16.4852},{15,15.7313},{16,15.0161},{17,14.3375},{18,13.6932},{19,
+             -13.0815},{20,12.5005},
+  61          {21,11.9485},{22,11.4239},{23,10.9252},{24,10.451},{25,10},{26,9.5709},{27,9.1626},{28,8.7738},{29,8.4037}
+             -,{30,8.0512},
+  62          {31,7.7154},{32,7.3954},{33,7.0904},{34,6.7996},{35,6.5223},{36,6.2577},{37,6.0053},{38,5.7645},{39,5.5345
+             -},{40,5.315},
+  63          {41,5.1053},{42,4.905},{43,4.7136},{44,4.5307},{45,4.3558},{46,4.1887},{47,4.0287},{48,3.8758},{49,3.7294}
+             -,{50,3.5893},
+  64          {51,3.4553},{52,3.3269},{53,3.2039},{54,3.0862},{55,2.9733},{56,2.8652},{57,2.7616},{58,2.6622},{59,2.5669
+             -},{60,2.4755},
+  65          {61,2.3879},{62,2.3038},{63,2.2231},{64,2.1456},{65,2.0712},{66,1.9998},{67,1.9312},{68,1.8653},{69,1.8019
+             -},{70,1.7411},
+  66          {71,1.6826},{72,1.6264},{73,1.5723},{74,1.5203},{75,1.4703},{76,1.4222},{77,1.3759},{78,1.3313},{79,1.2884
+             -},{80,1.2471},
+  67          {81,1.2073},{82,1.169},{83,1.1321},{84,1.0965},{85,1.0623},{86,1.0293},{87,0.9974},{88,0.9667},{89,0.9372}
+             -,{90,0.9086},
+  68          {91,0.8811},{92,0.8545},{93,0.8289},{94,0.8042},{95,0.7803},{96,0.7572},{97,0.735},{98,0.7135},{99,0.6927}
+             -,{100,0.6727},
+  69          {101,0.6533},{102,0.6346},{103,0.6165},{104,0.599},{105,0.5821}
+  70          };
+  71          float code PT100[46][2]={
+  72          {28,199},{29,211},{30,221},{31,232},{32,243},{33,254},{34,268},{35,280},{36,291},{37,301},
+  73          {38,311.5},{39,323},{40,335},{41,347},{42,359},{43,370},{44,380},{45,391},{46,402},{47,413},
+  74          {48,424},{49,435},{50,446},{51,458},{52,470},{53,482},{54,493},{55,504.5},{56,517},{57,530},
+  75          {58,542},{59,553},{60,564},{61,575},{62,586},{63,597},{64,607},{65,617},{66,627},{67,637},
+  76          {68,649},{69,660},{70,673},{71,686},{72,698},{73,713}
+  77          };//PT100表
+  78          
+  79          sbit LED1 = P4^2;
+  80          sbit LED2 = P4^4;
+  81          sbit KEY3 = P3^4;
+  82          sbit KEY2 = P3^5;
+  83          sbit KEY1 = P3^6;
+  84          sbit TURN1 = P2^7;
+  85          sbit TURN2 = P2^6;
+  86          sbit TURN3 = P2^5;
+  87          sbit TURN4 = P2^4;
+  88          
+  89          sbit RD_WR = P5^5;       //发送置0 接受置1
+  90          
+  91          /******************************
+  92          函数说明：延时函数  1-65535毫秒
+  93          入口参数：ms=延时毫秒数
+  94          出口参数：无
+  95          ******************************/
+  96          void Delay_MS(unsigned int ms)
+  97          {
+  98   1          unsigned char i, j;
+  99   1          _nop_();
+ 100   1          while(ms--)
+ 101   1          {
+ 102   2              i = 6;  j = 210;
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 3   
+
+ 103   2              while (--i)
+ 104   2              while (--j);
+ 105   2          }
+ 106   1      }
+ 107          
+ 108          /******************************
+ 109          函数说明：初始化ADC寄存器，设置P1.6为ADC输入功能
+ 110          入口参数：无
+ 111          出口参数：无
+ 112          ******************************/
+ 113          void Init_ADC(void)
+ 114          {
+ 115   1          P1M1 = 0xFF;
+ 116   1              P1M0 = 0x00;
+ 117   1          P1ASF = 0x40;       //打开P1.6口的ADC功能
+ 118   1          //P1 &= 0xBF;         //设置P1.6口输出低电平确保能采集到外部电平信号
+ 119   1              //P1 = 0x37;
+ 120   1          ADC_RES = 0;        //清掉ADC转换结果寄存器
+ 121   1          ADC_CONTR = ADC_POWER | ADC_SPEED3; //使能A/D供电，设置转换速度90T
+ 122   1      }
+ 123          
+ 124          /******************************
+ 125          函数说明：查询方式读取ADC转换结果
+ 126          入口参数：channel  ADC采样通道
+ 127          出口参数：result   ADC_RES ADC转换结果
+ 128          ******************************/
+ 129          unsigned int Get_AD(unsigned char channel)
+ 130          {
+ 131   1          unsigned int result;
+ 132   1          ADC_RES = 0;    
+ 133   1          ADC_RESL= 0;//清掉ADC转换结果寄存器
+ 134   1          ADC_CONTR =ADC_POWER|ADC_SPEED0|ADC_START|channel;//配置ADC，设置转换通道，启动转换
+ 135   1          _nop_();    _nop_();
+ 136   1          _nop_();    _nop_();            //等待设置ADC_POWER完毕
+ 137   1          while (!(ADC_CONTR & ADC_FLAG));//读取转换完毕标志位ADC_FLAG
+ 138   1          ADC_CONTR &= ~ADC_FLAG;         //清除ADC_FLAG标志位
+ 139   1          result = ADC_RES<<2|ADC_RESL;   //读取10位转换结果保存到result
+ 140   1          return result;                  //返回ADC转换结果10位
+ 141   1      }
+ 142          
+ 143          /******************************
+ 144          函数说明：电压值测量函数
+ 145          入口参数：无
+ 146          出口参数：voltage 计算后得到的电压值
+ 147          ******************************/
+ 148          float Voltage_Measure(void)
+ 149          {        int   i = 0,j = 0;
+ 150   1           float voltage = 0;
+ 151   1               int voltage_AD_avg = 0;          //AD采样平均值
+ 152   1               unsigned int voltage_std_AD = 0;
+ 153   1               for(j=0;j<10;j++)                               //10次求平均 采样间隔1ms
+ 154   1                {
+ 155   2                        voltage_std_AD = Get_AD(7);
+ 156   2                        Delay_MS(1);                                                     //采样间隔1ms
+ 157   2                        voltage_AD_avg += voltage_std_AD;
+ 158   2                }
+ 159   1               voltage_AD_avg = voltage_AD_avg/10;    //  除10求平均
+ 160   1               voltage = (1024/(float)voltage_AD_avg )*2.5;
+ 161   1               return voltage; 
+ 162   1      }
+ 163          
+ 164          float Voltage_Measure2_5v_ad(void)
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 4   
+
+ 165          {        int   i = 0,j = 0;
+ 166   1           float voltage = 0;
+ 167   1               int voltage_AD_avg = 0;          //AD采样平均值
+ 168   1               unsigned int voltage_std_AD = 0;
+ 169   1               for(j=0;j<10;j++)                               //10次求平均 采样间隔1ms
+ 170   1                {
+ 171   2                        voltage_std_AD = Get_AD(7);
+ 172   2                        Delay_MS(1);                                                     //采样间隔1ms
+ 173   2                        voltage_AD_avg += voltage_std_AD;
+ 174   2                }
+ 175   1               voltage_AD_avg = voltage_AD_avg/10;    //  除10求平均
+ 176   1               return voltage_AD_avg; 
+ 177   1      }
+ 178          
+ 179          /******************************
+ 180          函数说明：温度值测量函数
+ 181          入口参数：无
+ 182          出口参数：temperature 计算后得到的温度值
+ 183          ******************************/
+ 184          float Temp_Measure()
+ 185          {         int   i = 0,j = 0;
+ 186   1            unsigned int voltage_AD = 0;        //本次采样AD值
+ 187   1                long int voltage_AD_avg = 0;    //AD采样平均值
+ 188   1                float voltage = 0;              //根据ad求出的电压值 不利用电源电压的求法
+ 189   1                float resistance = 0;           //根据电压算出的传感器阻值
+ 190   1                float temperature = 0;                  //温度值
+ 191   1      
+ 192   1                for(j=0;j<10;j++)                              //10次求平均 采样间隔1ms
+ 193   1                {
+ 194   2                        voltage_AD = Get_AD(6);
+ 195   2                        Delay_MS(1);                                                     //采样间隔1ms
+ 196   2                        voltage_AD_avg += voltage_AD;
+ 197   2                }
+ 198   1                
+ 199   1                voltage_AD_avg = voltage_AD_avg/10;    //  除10求平均 
+ 200   1                if (voltage_AD_avg <5 )                                //传感器未连接判断  如果没电压则没有连接
+ 201   1                {error = 1;}
+ 202   1                else
+ 203   1                {error = 0;}
+ 204   1                resistance = 10*(1024 - (float)voltage_AD_avg)/(float)voltage_AD_avg;    //计算电阻值 根据满电压ad为102
+             -4
+ 205   1                for(i=0; i<145; i++)                                                                                                     //轮询法查表
+ 206   1                {
+ 207   2                   if((resistance<=NTC[i][1]) && (resistance>NTC[i+1][1]) )     //|| (resistance>=NTC[i][1])
+ 208   2                         {
+ 209   3                                      temperature = NTC[i][0] + (NTC[i][1]-resistance)/(NTC[i][1]-NTC[i+1][1]);break;   //线性插值法
+ 210   3                         }
+ 211   2                       
+ 212   2                       else continue;
+ 213   2                }               
+ 214   1                return temperature;
+ 215   1      }
+ 216          
+ 217          /******************************
+ 218          函数说明：温度值测量函数    使用PT100
+ 219          入口参数：无
+ 220          出口参数：temperature 计算后得到的温度值
+ 221          ******************************/
+ 222          float Temp_Measure_PT100(int voltage_std_ad)
+ 223          {         int   i = 0,j = 0;
+ 224   1            unsigned int voltage_AD = 0;        //本次采样AD值
+ 225   1                long int voltage_AD_avg = 0;    //AD采样平均值
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 5   
+
+ 226   1                float voltage = 0;              //根据ad求出的电压值 不利用电源电压的求法
+ 227   1                float temperature = 0;                  //温度值
+ 228   1                long float resistance = 0;
+ 229   1                for(j=0;j<10;j++)                              //10次求平均 采样间隔1ms
+ 230   1                {
+ 231   2                        voltage_AD = Get_AD(3);    //PT100连接通道2
+ 232   2                        Delay_MS(1);                                                     //采样间隔1ms
+ 233   2                        voltage_AD_avg += voltage_AD;
+ 234   2                }
+ 235   1                
+ 236   1                voltage_AD_avg = voltage_AD_avg/10;    //  除10求平均 
+ 237   1                if (voltage_AD_avg <5)                                 //传感器未连接判断  如果没电压则没有连接
+ 238   1                {error = 1;}
+ 239   1                else
+ 240   1                {error = 0;}
+ 241   1                voltage = ((float)voltage_AD_avg/(float)voltage_std_ad)*2.5;
+ 242   1                PT100_error_flag = 1;
+ 243   1                for(i=0; i<45; i++)                                                                                                      //轮询法查表    n-1
+ 244   1                {
+ 245   2               if(( voltage_AD_avg >= PT100[i][1]) && ( voltage_AD_avg < PT100[i+1][1]) )
+ 246   2                         {
+ 247   3                                      temperature = PT100[i][0] + (voltage_AD_avg - PT100[i][1])/(PT100[i+1][1]-PT100[i][1])*(PT100[i+1][0]-
+             -PT100[i][0]);          //线性插值法
+ 248   3                                      PT100_error_flag = 0;
+ 249   3                                      break;
+ 250   3                         }
+ 251   2                       else continue;
+ 252   2                }               
+ 253   1                return temperature;
+ 254   1      }
+ 255          
+ 256          /******************************
+ 257          函数说明：数转换为4位数码管显示码
+ 258          入口参数：dat 需转化的数字
+ 259          出口参数：无 操作对象为Showtemp[4]
+ 260          ******************************/
+ 261          void LED_Translate(float dat)
+ 262          {
+ 263   1          int data1 = 0;
+ 264   1              
+ 265   1              if ((dat<10)&&(dat>-10))
+ 266   1              {
+ 267   2                      data1 = (int)(dat*100);
+ 268   2                              if(dat >= 0)    
+ 269   2                              {Showtemp[0] = 0xFF;}                      //数码管第1位显示 符号位
+ 270   2                              if(dat < 0)     
+ 271   2                              {Showtemp[0] = 0xBF;
+ 272   3                              data1 = 0-data1;}
+ 273   2                      Showtemp[1] =  Table[(data1/100)]&0x7F;       //个位数显示  加小数点                                            
+ 274   2                      Showtemp[2] =  Table[data1%100/10];         //小数点后一位显示          
+ 275   2                      Showtemp[3] =  Table[data1%10];                   //小数点后两位显示
+ 276   2          }
+ 277   1              else if ((dat<100)&&(dat>-100))
+ 278   1              {
+ 279   2                      data1 = (int)(dat*10);
+ 280   2                              if(dat >= 0)    
+ 281   2                              {Showtemp[0] = 0xFF;}                           //数码管第1位显示       符号位
+ 282   2                              if(dat < 0)     
+ 283   2                              {Showtemp[0] = 0xBF;
+ 284   3                              data1 = 0-data1;}
+ 285   2                      Showtemp[1] =  Table[data1/100];                 //十位数显示                                   
+ 286   2                      Showtemp[2] =  Table[data1%100/10]&0x7F;     //个位数显示  加小数点          
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 6   
+
+ 287   2                      Showtemp[3] =  Table[data1%10];                      //小数点后一位显示
+ 288   2          }
+ 289   1              else if ((dat>=100)&&(dat<1000))
+ 290   1              {
+ 291   2                       data1 = (int)(dat*10);
+ 292   2                       Showtemp[0] =  Table[data1/1000];                //百位数显示
+ 293   2                       Showtemp[1] =  Table[data1%1000/100];            //十位数显示                                  
+ 294   2                       Showtemp[2] =  Table[data1%100/10]&0x7F;     //个位数显示  加小数点          
+ 295   2                       Showtemp[3] =  Table[data1%10];                      //小数点后一位显示
+ 296   2              }
+ 297   1              else if (dat>=1000)
+ 298   1              {
+ 299   2                       Showtemp[0] =  Table[(int)dat/1000];      //千位数显示
+ 300   2                       Showtemp[1] =  Table[(int)dat%1000/100];   //百位数显示                                        
+ 301   2                       Showtemp[2] =  Table[(int)dat%100/10];     //十位数显示
+ 302   2                       Showtemp[3] =  Table[(int)dat%10];                     //个
+ 303   2              }                                               
+ 304   1      }
+ 305          
+ 306          void Send_Translate(float dat)
+ 307          {
+ 308   1          int data1 = 0;      
+ 309   1              if ((dat<255)&&(dat>-255))
+ 310   1              {
+ 311   2                      data1 = (int)(dat*100);
+ 312   2                              if(dat >= 0)    
+ 313   2                              {Sendtemp[0] = 2;}                         //数码管第1位显示 符号位
+ 314   2                              if(dat < 0)     
+ 315   2                              {Showtemp[0] = 3;
+ 316   3                              data1 = 0-data1;}
+ 317   2                      Sendtemp[1] =  (data1/100);           //个位数显示  加小数点                                            
+ 318   2                      Sendtemp[2] =  data1%100;         //小数点后一位显示          
+ 319   2          }                                                   
+ 320   1      }
+ 321          
+ 322          float Receive_Translate()
+ 323          {
+ 324   1          float data1 = 0;    
+ 325   1                              if(Receivetemp[0] == 2) 
+ 326   1                              {
+ 327   2                                 data1 = (float)Receivetemp[1] + (float)Receivetemp[2]*0.01;
+ 328   2                              }                        
+ 329   1                              if(Receivetemp[0] == 3) 
+ 330   1                              {
+ 331   2                                      data1 = (float)Receivetemp[1] + (float)Receivetemp[2]*0.01;
+ 332   2                                      data1 = 0-data1;
+ 333   2                              }
+ 334   1           return data1;                                                              
+ 335   1      }
+ 336          
+ 337          float Receive_Translate_test()
+ 338          {
+ 339   1          float data1 = 0;    
+ 340   1                              if(Sendtemp[0] == 2)    
+ 341   1                              {
+ 342   2                                 data1 = (float)Sendtemp[1] + (float)Sendtemp[2]*0.01;
+ 343   2                              }                        
+ 344   1                              if(Sendtemp[0] == 3)    
+ 345   1                              {
+ 346   2                                      data1 = (float)Sendtemp[1] + (float)Sendtemp[2]*0.01;
+ 347   2                                      data1 = 0-data1;
+ 348   2                              }
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 7   
+
+ 349   1           return data1;                                                              
+ 350   1      }
+ 351          /******************************
+ 352          函数说明：数码管全灭 无需进入中断执行 全部 四个位 拉高
+ 353          入口参数：无
+ 354          出口参数：无 
+ 355          ******************************/
+ 356          void LED_Clean(void)             //LED灯全灭函数
+ 357          {       int ii = 0;
+ 358   1              Showtemp[0] = 0xFF;     
+ 359   1              Showtemp[1] = 0xFF; 
+ 360   1              Showtemp[2] = 0xFF; 
+ 361   1              Showtemp[3] = 0xFF;
+ 362   1              for(ii=0; ii<4; ii++)
+ 363   1              {
+ 364   2                  P2 = 0x0F;               //关闭所有数码管选通
+ 365   2              P0 = Showtemp[ii];       //送段码 低电平有效
+ 366   2              P2 = ~(0x01<<ii);    }   //选择位选
+ 367   1      }
+ 368          
+ 369          /******************************
+ 370          函数说明：摁键扫描函数 中断执行 
+ 371          入口参数：无   全局变量   keystatus  keycount  key_final
+ 372          出口参数：无 
+ 373          ******************************/
+ 374          void key_scan(void)
+ 375          {
+ 376   1              if (keystatus == 0)                      //摁键摁下
+ 377   1                      {                   
+ 378   2                              if (KEY1 == 0)
+ 379   2                              keystatus =1;
+ 380   2                              if (KEY2 == 0)
+ 381   2                              keystatus =2;
+ 382   2                              if (KEY3 == 0)
+ 383   2                              keystatus =3; 
+ 384   2                      }
+ 385   1              else
+ 386   1              {           
+ 387   2                      keycount++;
+ 388   2                      if(keycount==50)                        //消抖检测
+ 389   2                      {
+ 390   3                         keycount = 0;
+ 391   3                         if(keystatus == 1)
+ 392   3                                {if (KEY1 == 0)
+ 393   4                                        key = 1;}
+ 394   3                         if(keystatus == 2)
+ 395   3                                {if (KEY2 == 0)
+ 396   4                                        key = 2;}
+ 397   3                         if(keystatus == 3)
+ 398   3                                {if (KEY3 == 0)
+ 399   4                                        key = 3;}
+ 400   3                         keystatus =0;
+ 401   3                      }
+ 402   2                      
+ 403   2              }
+ 404   1         if(key == 1)                                         //摁键抬起确认  key_final置位代表一次摁键物理意义完成
+ 405   1                {if (KEY1 == 1)
+ 406   2                        {key_final = 1;key = 0;}}
+ 407   1         if(key == 2)
+ 408   1                {if (KEY2 == 1)
+ 409   2                        {key_final = 2;key = 0;}}
+ 410   1         if(key == 3)
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 8   
+
+ 411   1                {if (KEY3 == 1)
+ 412   2                        {key_final = 3;key = 0;}}
+ 413   1      }
+ 414          
+ 415          
+ 416          /******************************
+ 417          函数说明：拨码开关状态检测 主循环调用   拨码开关正常工作摁下执行程序在此处
+ 418          入口参数：无   
+ 419          出口参数：无  
+ 420          ******************************/
+ 421          void turn_check(void)
+ 422          {
+ 423   1              if(TURN1 == 0)                                    //检测各个摁键状态
+ 424   1              { turn1count = 1;}
+ 425   1              else {turn1count = 0;}
+ 426   1              if(TURN2 == 0)                                   
+ 427   1              { turn2count = 1;}
+ 428   1              else {turn2count = 0;}  
+ 429   1              if(TURN3 == 0)                                   
+ 430   1              { turn3count = 1;}
+ 431   1              else {turn3count = 0;}  
+ 432   1              if(TURN4 == 0)                                   
+ 433   1              { turn4count = 1;}
+ 434   1              else {turn4count = 0;}
+ 435   1              COMNUMBER = 8*turn1count +4*turn2count + 2*turn3count + turn4count;       //计算通讯地址编号
+ 436   1              if (COMNUMBER != comnumber_last)            //判断地址是否变化
+ 437   1              {
+ 438   2                 if (COMNUMBER > 0)                      //更新为从机 初始化全部变量状态
+ 439   2                 {   
+ 440   3                     LED2 = 1;                                           //灭绿灯
+ 441   3                     TB8 = 0;
+ 442   3                     SCON = 0xF0;                                        //9位数据,可变波特率，允许接收数据，从机（sm2 = 1）
+ 443   3                         RD_WR = 0;
+ 444   3                         receive_finish = 0;
+ 445   3                         send_finish = 0;
+ 446   3                         receiveuart_count = 0;
+ 447   3                     rdatapointer =  Receivetemp;
+ 448   3                         datapointer = Sendtemp;
+ 449   3                         senduart_count = 0;  
+ 450   3                 }
+ 451   2                 if (COMNUMBER == 0)                             //更新为主机 初始化全部变量状态
+ 452   2                 {   LED2 = 0;                                           //亮绿灯
+ 453   3                     LED1 = 1;
+ 454   3                     SCON = 0xD0;                            //9位数据,可变波特率，允许接收数据，主机
+ 455   3                         RD_WR = 1;
+ 456   3                         receive_finish = 0;
+ 457   3                         send_finish = 0;
+ 458   3                         receiveuart_count = 0;
+ 459   3                     rdatapointer =  Receivetemp;
+ 460   3                         datapointer = Sendtemp;
+ 461   3                         senduart_count = 0;
+ 462   3                         TB8 = 1;                                                //给第一个设备发送第一帧数据
+ 463   3                 SBUF = 1;
+ 464   3                 }
+ 465   2              }
+ 466   1              comnumber_last = COMNUMBER;
+ 467   1      }
+ 468          /******************************
+ 469          函数说明：定时器0初始化  16位定时器自动重装载模式
+ 470          入口参数：无   
+ 471          出口参数：无 
+ 472          ******************************/
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 9   
+
+ 473          void Timer0Init(void)           //500微秒@11.0592MHz
+ 474          {
+ 475   1              AUXR |= 0x80;           //定时器时钟1T模式
+ 476   1              TMOD &= 0xF0;           //设置定时器模式
+ 477   1      
+ 478   1              TL0 = 0x66;                 //设置定时初值
+ 479   1              TH0 = 0xEA;                 //设置定时初值
+ 480   1              TF0 = 0;                //清除TF0标志
+ 481   1              TR0 = 1;                    //定时器0开始计时
+ 482   1      }
+ 483          
+ 484          /******************************
+ 485          函数说明：外部中断2中断服务函数  休眠标志置位和取消
+ 486          入口参数：无   
+ 487          出口参数：无   修改全局变量sleep_flag
+ 488          ******************************/
+ 489          void input2_ISR (void) interrupt 10                   //外部中断2
+ 490          {
+ 491   1           Delay_MS(25);
+ 492   1               if (KEY1 == 0)           
+ 493   1               {
+ 494   2               if(sleep_flag == 0)
+ 495   2                      {sleep_flag = 1;}
+ 496   2               else if(sleep_flag == 1)
+ 497   2                  sleep_flag = 0;
+ 498   2               } 
+ 499   1      }
+ 500          
+ 501          /******************************
+ 502          函数说明：定时器0中断服务函数  数码管扫描  摁键扫描
+ 503          入口参数：无   
+ 504          出口参数：无   修改全局变量sleep_flag
+ 505          ******************************/
+ 506          //Time0扫描LED显示驱动，计时,500us
+ 507          void time0(void) interrupt 1
+ 508          {
+ 509   1          if(4==++Ledcount)              //数码管扫描
+ 510   1          {Ledcount=0;
+ 511   2              }
+ 512   1          P2 = 0x0F;                 //关闭所有数码管选通
+ 513   1          P0 = Showtemp[Ledcount];       //送段码 低电平有效
+ 514   1          P2 = ~(0x01<<Ledcount);       //选择位选
+ 515   1      
+ 516   1          key_scan();                            //摁键扫描
+ 517   1      }
+ 518          
+ 519          /******************************
+ 520          函数说明：串口1初始化程序 9600bps
+ 521          入口参数：无   
+ 522          出口参数：无  
+ 523          ******************************/
+ 524          void UartInit(void)             //9600bps@11.0592MHz
+ 525          {
+ 526   1              SCON = 0xD0;            //9位数据,可变波特率，允许接收数据
+ 527   1              AUXR |= 0x40;           //定时器1时钟为Fosc,即1T
+ 528   1              AUXR &= 0xFE;           //串口1选择定时器1为波特率发生器
+ 529   1              TMOD &= 0x0F;           //设定定时器1为16位自动重装方式
+ 530   1              TL1 = 0xE0;             //设定定时初值
+ 531   1              TH1 = 0xFE;             //设定定时初值
+ 532   1              ET1 = 0;                //禁止定时器1中断
+ 533   1              TR1 = 1;                //启动定时器1
+ 534   1      }
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 10  
+
+ 535          /******************************
+ 536          函数说明：串口1中断服务程序 发送数据到串口
+ 537          入口参数：无    发送全局变量 Sendtemp[] 一次函数发全部数据
+ 538          出口参数：无  
+ 539          ******************************/
+ 540          void UART1_ISR() interrupt 4
+ 541          {   
+ 542   1              if (RI)                                  //如果收到请求信息
+ 543   1              {    
+ 544   2                 RI = 0;
+ 545   2                 rdata = SBUF;
+ 546   2                 if (COMNUMBER > 0)
+ 547   2                 {
+ 548   3                     
+ 549   3                         if(RB8)                                                       //判断地址帧
+ 550   3                         {
+ 551   4                                 
+ 552   4                                 if(rdata == COMNUMBER)                //判断主机号是否符合
+ 553   4                                     {SM2 = 0;LED1 = 0;}
+ 554   4                                 else
+ 555   4                                     {SM2 = 1;LED1 = 1;}         
+ 556   4                         }
+ 557   3                         else                                                          //数据帧 只有当设备选通才有效（SM2 = 0时）
+ 558   3                         {
+ 559   4                             *rdatapointer = rdata;
+ 560   4                                 rdatapointer++;
+ 561   4                                 receiveuart_count++;
+ 562   4                                      
+ 563   4                                 if(receiveuart_count == 4)    //传输完毕初始化变量
+ 564   4                                 {   
+ 565   5                                     receiveuart_count = 0;             //计数清零
+ 566   5                                         rdatapointer =  Receivetemp;   //复位指针
+ 567   5                                     SM2 = 1;                                           //复位地址监听状态
+ 568   5                                         receive_finish = 1;                    
+ 569   5                                 }
+ 570   4                         }
+ 571   3                 }
+ 572   2              }
+ 573   1              else if(TI)
+ 574   1              {
+ 575   2                 TI = 0;                               //清发送标志
+ 576   2                 TB8 = 0;
+ 577   2                 if(COMNUMBER == 0)
+ 578   2                 {
+ 579   3                         SBUF =  *datapointer;
+ 580   3                         datapointer++;
+ 581   3                         senduart_count++;
+ 582   3                         if(senduart_count == 4)                       //传输完毕初始化变量
+ 583   3                         {
+ 584   4                                 datapointer = Sendtemp;         //计数清零
+ 585   4                                 senduart_count = 0;             //复位指针                             
+ 586   4                                 send_finish = 1;
+ 587   4      
+ 588   4                               slave++;                                          //从机选择轮询 
+ 589   4                           RD_WR = 1;                  
+ 590   4                               ES = 1;
+ 591   4                               TB8 = 1;
+ 592   4                               SBUF = slave;                                                   
+ 593   4                               if (slave == COMMAX)              //设备数最大值检测
+ 594   4                                 slave = 0;
+ 595   4                         }
+ 596   3                 }
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 11  
+
+ 597   2              }
+ 598   1      } 
+ 599          /******************************
+ 600          函数说明：工作模式选择 0测温度 1测电压
+ 601          入口参数：无   
+ 602          出口参数：无  
+ 603          ******************************/
+ 604          void mood_choose_work(void)
+ 605          {
+ 606   1          int i = 0 ;
+ 607   1              int a =0;
+ 608   1              if(mood == 0)
+ 609   1              {
+ 610   2                      if (COMNUMBER == 0)
+ 611   2                      {
+ 612   3                              temp_result = Temp_Measure();   //测温度
+ 613   3      //                      LED_Translate(temp_result);             //转换出数码管显示值
+ 614   3                              Send_Translate(temp_result);
+ 615   3                              temp_result = Receive_Translate_test();     
+ 616   3                              LED_Translate(temp_result);                     
+ 617   3                      }
+ 618   2                      else
+ 619   2                      {                               
+ 620   3                              TB8 = 0;
+ 621   3                          RD_WR = 0;                          
+ 622   3                              while(!receive_finish)
+ 623   3                                      { WDT_CONTR =0x3E;
+ 624   4                                        turn_check();}
+ 625   3                              receive_finish = 0;
+ 626   3                              temp_result1 = Receive_Translate();
+ 627   3                              LED_Translate(temp_result1);
+ 628   3                      }
+ 629   2              }               
+ 630   1               if(mood == 1)
+ 631   1              {
+ 632   2                      VCC_measure = Voltage_Measure();        //测电压
+ 633   2                      LED_Translate(VCC_measure);                     //转换出数码管显示值
+ 634   2              }
+ 635   1              if(mood == 2)
+ 636   1              {
+ 637   2                      voltage_2_5v_ad = Voltage_Measure2_5v_ad();//测2.5v标准电压
+ 638   2                      temp_result = Temp_Measure_PT100(voltage_2_5v_ad);      //测温度
+ 639   2                      LED_Translate(temp_result);                     //转换出数码管显示值
+ 640   2              }        
+ 641   1      }
+ 642          
+ 643          /******************************
+ 644          函数说明：休眠状态检测 主循环调用 
+ 645          入口参数：无   
+ 646          出口参数：无  
+ 647          ******************************/
+ 648          void sleep_check(void)
+ 649          {
+ 650   1          if((sleep_flag == 1)||(sleep_flag1 == 1))    //sleep_flag 摁键进入   sleep_flag1 拨码开关进入
+ 651   1              {
+ 652   2                      if(sleep_flag1 == 1)
+ 653   2                      {turn_start = 0;sleep_flag1 = 0;}               
+ 654   2                      LED_Clean();       //关闭数码管
+ 655   2                      LED2 = 1;LED1 = 0;Delay_MS(200);LED1 = 1;Delay_MS(200);LED1 = 0;Delay_MS(200);LED1 = 1;            //休眠前红灯
+             -闪烁        
+ 656   2                      PCON = 0x02;                                       //进入休眠  程序停在此处
+ 657   2                      _nop_();_nop_();_nop_();                   //唤醒后执行的空指令
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 12  
+
+ 658   2                      LED2 = 0;Delay_MS(200);LED2 = 1;Delay_MS(200);LED2 = 0;Delay_MS(200);LED2 = 1;Delay_MS(200);LED2 = 0;  /
+             -/唤醒后绿灯闪烁
+ 659   2              }
+ 660   1      }
+ 661          
+ 662          /******************************
+ 663          函数说明：摁键状态检测 主循环调用       摁键正常工作摁下执行程序在此处
+ 664          入口参数：无   
+ 665          出口参数：无  
+ 666          ******************************/
+ 667          void key_check(void)
+ 668          {
+ 669   1              if(key_final == 1)   // 摁键1摁下执行程序位置
+ 670   1              {}
+ 671   1              if(key_final == 2)       // 摁键2摁下执行程序位置
+ 672   1              {if(mood < 2) 
+ 673   2                    {mood ++;}             
+ 674   2               else{mood = 0;}
+ 675   2               }
+ 676   1              if(key_final == 3)       // 摁键3摁下执行程序位置
+ 677   1              {}
+ 678   1              key_final = 0;
+ 679   1      }
+ 680          
+ 681          void main(void)
+ 682          {    
+ 683   1         WDT_CONTR =0x3E;                //喂看门狗
+ 684   1         rdatapointer =  Receivetemp;     //初始化数据指针
+ 685   1         datapointer =  Sendtemp;
+ 686   1         P0M0=0xff;       //推挽输出驱动共阴极数码管  
+ 687   1         KEY1 = 1;KEY2 = 1;KEY3 = 1;                   //拉高所有摁键  低电平有效
+ 688   1         TURN1 = 1;TURN2 = 1;TURN3 = 1;TURN4 = 1;                //拉高所有拨码开关 低电平有效
+ 689   1         LED_Clean();          //灭数码管
+ 690   1         Init_ADC();       //初始化ADC
+ 691   1         UartInit();           //串口初始化
+ 692   1         ES = 1;                       //打开串口中断 
+ 693   1         Timer0Init();     //设置T0用作数码管显示定时500us扫描，中断模式
+ 694   1         ET0=1;            //允许T0定时中断
+ 695   1         INT_CLKO |= 0x10; //允许外部中断2  
+ 696   1         Ledcount=0;       //LED扫描显示计数用
+ 697   1         EA=1;                         //中断总使能
+ 698   1         turn_check();     //拨码开关检测 进行设备地址初始化
+ 699   1         Delay_MS(50);   
+ 700   1         while(1)
+ 701   1         {    
+ 702   2                      turn_check();                      //拨码开关检测  检测设备地址变化
+ 703   2                      sleep_check();                     //休眠模式检测
+ 704   2              key_check();                       //摁键是否摁下检测
+ 705   2                  mood_choose_work();            //工作模式选择并work （测量）
+ 706   2      
+ 707   2                      if(error == 1)
+ 708   2                      {
+ 709   3                              Showtemp[0]=0xff;
+ 710   3                              Showtemp[1]=0xff;
+ 711   3                              Showtemp[2]=0x86;       //E
+ 712   3                              Showtemp[3]=Table[1];   //显示E1
+ 713   3                      }
+ 714   2                      if (error == 2)
+ 715   2                      {
+ 716   3                              Showtemp[0]=0xff;
+ 717   3                              Showtemp[1]=0xff;
+ 718   3                              Showtemp[2]=0x86;       //E
+C51 COMPILER V9.02   MAIN                                                                  07/11/2018 19:41:22 PAGE 13  
+
+ 719   3                              Showtemp[3]=Table[2];   //显示E2
+ 720   3                      }
+ 721   2                      if(PT100_error_flag == 1)
+ 722   2                      {
+ 723   3                              Showtemp[0]=0xff;
+ 724   3                              Showtemp[1]=0xff;
+ 725   3                              Showtemp[2]=0x86;       //E
+ 726   3                              Showtemp[3]=Table[3];   //显示E3
+ 727   3                              PT100_error_flag = 0;
+ 728   3                      }
+ 729   2                      Delay_MS(1000);
+ 730   2                      WDT_CONTR =0x3E;                   //喂看门狗
+ 731   2         }
+ 732   1      }                
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3677    ----
+   CONSTANT SIZE    =   1552    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     57      78
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
